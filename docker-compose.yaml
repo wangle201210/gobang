@@ -1,15 +1,28 @@
+# 注意：需要设置 TURN_HOST 环境变量为服务器公网IP
+# 例如：TURN_HOST=47.108.251.244 docker compose up -d
+
 services:
+  # 五子棋前端
   gobang:
     image: iwangle/gobang:latest
     ports:
       - "8080:80"
     restart: unless-stopped
-    networks:
-      - gobang-net
 
-networks:
-  gobang-net:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.28.0.0/16
+  # TURN 服务器，用于 NAT 穿透（无认证模式）
+  coturn:
+    image: coturn/coturn
+    ports:
+      - "3478:3478/tcp"
+      - "3478:3478/udp"
+    restart: unless-stopped
+    command: >-
+      -n
+      --log-file=stdout
+      --external-ip=${TURN_HOST:-127.0.0.1}
+      --listening-port=3478
+      --realm=gobang
+      --no-tls
+      --no-dtls
+      --fingerprint
+      --no-auth

@@ -3,18 +3,28 @@ import Peer from 'peerjs'
 
 // ICE 服务器配置，用于 NAT 穿透
 const iceServers = [
+  // STUN 服务器
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
-  { urls: 'stun:stun2.l.google.com:19302' },
-  { urls: 'stun:stun3.l.google.com:19302' },
-  { urls: 'stun:stun4.l.google.com:19302' },
-  { urls: 'stun:global.stun.twilio.com:3478' },
-  { urls: 'stun:stun.cloudflare.com:3478' },
 ]
+
+// 如果配置了 TURN 服务器，添加到列表最前面
+if (import.meta.env.VITE_TURN_URL) {
+  iceServers.unshift({
+    urls: [
+      import.meta.env.VITE_TURN_URL,
+      `${import.meta.env.VITE_TURN_URL}?transport=tcp`,
+    ],
+    // 浏览器要求 TURN 必须有凭证，但服务器配置为无认证模式
+    username: 'guest',
+    credential: 'guest',
+  })
+}
 
 const peerConfig = {
   config: {
     iceServers,
+    iceCandidatePoolSize: 10,
   },
 }
 

@@ -3,6 +3,9 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# 构建参数
+ARG VITE_TURN_URL
+
 COPY package*.json ./
 RUN npm ci
 
