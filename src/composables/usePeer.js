@@ -249,6 +249,9 @@ export function usePeer() {
     } else if (data.type === 'restart') {
       broadcast(data, peerId)
       if (onMessage) onMessage(data)
+    } else if (data.type === 'request_sync') {
+      // 客户端请求同步状态
+      if (onMessage) onMessage({ type: 'sync_requested', peerId })
     } else {
       if (onMessage) onMessage(data)
     }
@@ -298,8 +301,12 @@ export function usePeer() {
 
   function broadcast(data, excludePeerId = null) {
     connections.forEach((conn, peerId) => {
-      if (peerId !== excludePeerId) {
-        conn.send(data)
+      if (peerId !== excludePeerId && conn.open) {
+        try {
+          conn.send(data)
+        } catch (e) {
+          console.error('发送消息失败:', peerId, e)
+        }
       }
     })
   }
@@ -396,13 +403,28 @@ export function usePeer() {
     }
   }
 
-  function sendMessage(data) {
+  function sendMessage(data, targetPeerId = null) {
     if (isHost.value) {
-      // 房主广播给所有人
-      broadcast(data)
+      if (targetPeerId) {
+        // 发送给指定的连接
+        const conn = connections.get(targetPeerId)
+        if (conn) {
+          conn.send(data)
+        }
+      } else {
+        // 房主广播给所有人
+        broadcast(data)
+      }
     } else if (hostConnection.value) {
       // 非房主发给房主
       hostConnection.value.send(data)
+    }
+  }
+
+  // 请求同步状态（非房主用）
+  function requestSync() {
+    if (!isHost.value && hostConnection.value && hostConnection.value.open) {
+      hostConnection.value.send({ type: 'request_sync' })
     }
   }
 
@@ -540,5 +562,6 @@ export function usePeer() {
     disconnect,
     getSavedRoomInfo,
     clearRoomInfo,
+    requestSync,
   }
 }

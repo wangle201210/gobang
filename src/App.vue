@@ -14,6 +14,7 @@ const {
   placeStone,
   resetGame,
   syncBoard,
+  getBoardState,
 } = useGame()
 
 const {
@@ -33,6 +34,7 @@ const {
   disconnect,
   getSavedRoomInfo,
   clearRoomInfo,
+  requestSync,
 } = usePeer()
 
 // UI状态
@@ -179,15 +181,25 @@ function handleMessage(data) {
     // 同步棋盘状态给新加入的观众
     syncBoard(data.board, data.currentPlayer, data.moveHistory)
   } else if (data.type === 'member_joined' && isHost.value) {
-    // 新成员加入时，同步当前棋局状态
+    // 新成员加入时，同步当前棋局状态给该成员（不是广播给所有人）
     if (moveHistory.value.length > 0) {
+      const state = getBoardState()
       sendMessage({
         type: 'sync',
-        board: board.value,
-        currentPlayer: currentPlayer.value,
-        moveHistory: moveHistory.value,
-      })
+        board: state.board,
+        currentPlayer: state.currentPlayer,
+        moveHistory: state.moveHistory,
+      }, data.peerId)
     }
+  } else if (data.type === 'sync_requested' && isHost.value) {
+    // 有人请求同步状态
+    const state = getBoardState()
+    sendMessage({
+      type: 'sync',
+      board: state.board,
+      currentPlayer: state.currentPlayer,
+      moveHistory: state.moveHistory,
+    }, data.peerId)
   }
 }
 
@@ -449,6 +461,9 @@ async function handleGiveUpSeat(spectatorId, spectatorName) {
           <button @click="copyShareLink" class="py-2 px-4 rounded-lg bg-gray-100 text-gray-800 text-sm hover:bg-gray-200 active:bg-gray-300 transition-colors">
             {{ showCopied ? '已复制!' : '邀请好友' }}
           </button>
+          <button v-if="!isHost" @click="requestSync" class="py-2 px-4 rounded-lg bg-gray-100 text-gray-800 text-sm hover:bg-gray-200 active:bg-gray-300 transition-colors" title="如果棋盘不同步，点击刷新">
+            同步棋盘
+          </button>
           <button @click="handleExit" class="py-2 px-4 bg-transparent text-gray-400 hover:text-gray-600 transition-colors text-sm">
             退出房间
           </button>
@@ -558,6 +573,9 @@ async function handleGiveUpSeat(spectatorId, spectatorName) {
           </button>
           <button @click="copyShareLink" class="w-full py-2 px-4 rounded-lg bg-gray-100 text-gray-800 text-sm hover:bg-gray-200 active:bg-gray-300 transition-colors">
             {{ showCopied ? '已复制!' : '邀请好友' }}
+          </button>
+          <button v-if="!isHost" @click="requestSync" class="w-full py-2 px-4 rounded-lg bg-gray-100 text-gray-800 text-sm hover:bg-gray-200 active:bg-gray-300 transition-colors" title="如果棋盘不同步，点击刷新">
+            同步棋盘
           </button>
           <button @click="handleExit" class="w-full py-2 px-4 bg-transparent text-gray-400 hover:text-gray-600 transition-colors text-sm">
             退出房间
