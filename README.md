@@ -25,6 +25,10 @@
 # 安装依赖
 npm install
 
+# 配置 TURN 服务器（可选，用于跨网络连接）
+cp .env.example .env.local
+# 编辑 .env.local 设置 VITE_TURN_URL
+
 # 启动开发服务器
 npm run dev
 
@@ -32,14 +36,31 @@ npm run dev
 npm run build
 ```
 
-## Docker 部署
+## 部署
+
+### 方式一：Docker Compose（推荐）
+
+包含前端和 TURN 服务器，支持跨网络对战：
+
+```bash
+# 设置服务器公网 IP 并启动
+TURN_HOST=你的服务器IP docker compose up -d
+```
+
+需要开放端口：
+- `8080` - 前端 Web 服务
+- `3478/tcp` 和 `3478/udp` - TURN 服务器
+
+### 方式二：仅前端
+
+仅在局域网内使用：
 
 ```bash
 # 使用预构建镜像
 docker run -d -p 8080:80 iwangle/gobang:latest
 
-# 或者自行构建
-docker build -t gobang .
+# 或者自行构建（带 TURN 支持）
+docker build --build-arg VITE_TURN_URL=turn:你的服务器IP:3478 -t gobang .
 docker run -d -p 8080:80 gobang
 ```
 
@@ -57,7 +78,9 @@ docker run -d -p 8080:80 gobang
 ## 注意事项
 
 - 需要浏览器支持 WebRTC
-- 房主刷新页面后，其他玩家需要重新连接
+- 跨网络对战需要部署 TURN 服务器（见 Docker Compose 部署方式）
+- 局域网内可直接使用，无需 TURN 服务器
+- 房主刷新页面后，其他玩家会自动尝试重连
 - 建议使用现代浏览器（Chrome、Firefox、Safari、Edge）
 
 ## License
