@@ -91,6 +91,31 @@ export function useGame() {
     gameStarted.value = true
   }
 
+  // 同步棋盘状态（用于观众加入时同步）
+  function syncBoard(newBoard, newCurrentPlayer, newMoveHistory) {
+    board.value = newBoard
+    currentPlayer.value = newCurrentPlayer
+    moveHistory.value = newMoveHistory || []
+    gameStarted.value = true
+    // 检查是否已有获胜者
+    if (newMoveHistory && newMoveHistory.length > 0) {
+      const lastMove = newMoveHistory[newMoveHistory.length - 1]
+      if (checkWin(lastMove.x, lastMove.y, lastMove.player)) {
+        winner.value = lastMove.player
+      }
+    }
+  }
+
+  // 获取当前棋盘状态（用于发送给新加入的观众）
+  function getBoardState() {
+    return {
+      board: board.value.map(row => [...row]),
+      currentPlayer: currentPlayer.value,
+      moveHistory: [...moveHistory.value],
+      winner: winner.value,
+    }
+  }
+
   return {
     board,
     currentPlayer,
@@ -103,6 +128,8 @@ export function useGame() {
     placeStone,
     resetGame,
     startGame,
+    syncBoard,
+    getBoardState,
     BOARD_SIZE,
   }
 }

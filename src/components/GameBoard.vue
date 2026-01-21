@@ -19,8 +19,9 @@ const props = defineProps({
 const emit = defineEmits(['place'])
 
 const BOARD_SIZE = 15
-const CELL_SIZE = 36
-const PADDING = 20
+const CELL_SIZE = 40
+const PADDING = 24
+const STONE_RADIUS = 18
 const boardPixelSize = computed(() => (BOARD_SIZE - 1) * CELL_SIZE + PADDING * 2)
 
 function handleClick(x, y) {
@@ -77,11 +78,11 @@ const cells = computed(() => {
 </script>
 
 <template>
-  <div class="board-container">
+  <div class="w-full rounded-lg shadow-xl overflow-hidden touch-manipulation select-none">
     <svg
-      :width="boardPixelSize"
-      :height="boardPixelSize"
-      class="board"
+      :viewBox="`0 0 ${boardPixelSize} ${boardPixelSize}`"
+      class="block w-full h-auto"
+      preserveAspectRatio="xMidYMid meet"
     >
       <!-- 棋盘背景 -->
       <rect
@@ -123,8 +124,8 @@ const cells = computed(() => {
         :width="CELL_SIZE"
         :height="CELL_SIZE"
         fill="transparent"
-        class="cell"
-        :class="{ disabled: disabled || board[cell.y][cell.x] !== 0 }"
+        class="cursor-pointer hover:fill-black/10"
+        :class="{ 'cursor-not-allowed hover:fill-transparent': disabled || board[cell.y][cell.x] !== 0 }"
         @click="handleClick(cell.x, cell.y)"
       />
 
@@ -136,14 +137,14 @@ const cells = computed(() => {
             <circle
               :cx="PADDING + x * CELL_SIZE + 2"
               :cy="PADDING + y * CELL_SIZE + 2"
-              r="15"
+              :r="STONE_RADIUS"
               fill="rgba(0,0,0,0.3)"
             />
             <!-- 棋子本体 -->
             <circle
               :cx="PADDING + x * CELL_SIZE"
               :cy="PADDING + y * CELL_SIZE"
-              r="15"
+              :r="STONE_RADIUS"
               :fill="cell === 1 ? '#222' : '#fff'"
               :stroke="cell === 1 ? '#000' : '#999'"
               stroke-width="1"
@@ -169,28 +170,3 @@ const cells = computed(() => {
     </svg>
   </div>
 </template>
-
-<style scoped>
-.board-container {
-  display: inline-block;
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-  overflow: hidden;
-}
-
-.board {
-  display: block;
-}
-
-.cell {
-  cursor: pointer;
-}
-
-.cell:hover:not(.disabled) {
-  fill: rgba(0, 0, 0, 0.1);
-}
-
-.cell.disabled {
-  cursor: not-allowed;
-}
-</style>
