@@ -4,6 +4,7 @@ import { ElMessageBox, ElMessage } from 'element-plus'
 import GameBoard from './components/GameBoard.vue'
 import { useGame } from './composables/useGame'
 import { usePeer } from './composables/usePeer'
+import githubIcon from './assets/github.svg'
 
 const {
   board,
@@ -30,6 +31,8 @@ const {
   changeName,
   giveUpSeat,
   disconnect,
+  getSavedRoomInfo,
+  clearRoomInfo,
 } = usePeer()
 
 // UI状态
@@ -137,12 +140,25 @@ async function copyToClipboard(text) {
   }
 }
 
-// 页面加载时检查 URL 参数
-onMounted(() => {
-  const roomId = getRoomIdFromUrl()
-  if (roomId) {
-    roomIdInput.value = roomId
-    handleJoinRoom()
+// 页面加载时检查 URL 参数，支持身份恢复
+onMounted(async () => {
+  const urlRoomId = getRoomIdFromUrl()
+  const savedRoom = getSavedRoomInfo()
+
+  if (urlRoomId && savedRoom && savedRoom.roomId === urlRoomId) {
+    // URL 和保存的房间匹配，尝试恢复
+    if (savedRoom.isHost) {
+      // 我是房主，用同一个 roomId 重建房间
+      await handleCreateRoom(urlRoomId)
+    } else {
+      // 我是加入者，尝试重连
+      roomIdInput.value = urlRoomId
+      await handleJoinRoom()
+    }
+  } else if (urlRoomId) {
+    // URL 有房间号但没有匹配的保存信息，正常加入
+    roomIdInput.value = urlRoomId
+    await handleJoinRoom()
   }
 })
 
@@ -176,10 +192,12 @@ function handleMessage(data) {
 }
 
 // 创建房间
-async function handleCreateRoom() {
+async function handleCreateRoom(existingRoomId = null) {
+  // 如果传入的是事件对象（从按钮点击），忽略它
+  const roomId = typeof existingRoomId === 'string' ? existingRoomId : null
   isCreating.value = true
   try {
-    await createRoom(handleMessage)
+    await createRoom(handleMessage, roomId)
   } catch (e) {
     console.error(e)
   }
@@ -227,6 +245,7 @@ async function copyShareLink() {
 function handleExit() {
   disconnect()
   resetGame()
+  clearRoomInfo()
   updateUrlWithRoom('')
 }
 
@@ -278,7 +297,12 @@ async function handleGiveUpSeat(spectatorId, spectatorName) {
 <template>
   <div class="min-h-screen min-h-dvh flex flex-col items-center p-3 md:p-5 pt-[env(safe-area-inset-top,20px)] pb-[env(safe-area-inset-bottom,20px)] bg-gradient-to-br from-sky-100 via-blue-50 to-indigo-100">
     <!-- 手机端标题 -->
-    <h1 class="lg:hidden text-indigo-600 mb-4 text-2xl font-bold">P2P 五子棋</h1>
+    <div class="lg:hidden flex items-center gap-3 mb-4">
+      <h1 class="text-indigo-600 text-2xl font-bold">P2P 五子棋</h1>
+      <a href="https://github.com/wangle201210/gobang" target="_blank" class="opacity-60 hover:opacity-100 transition-opacity">
+        <img :src="githubIcon" alt="GitHub" class="w-6 h-6" />
+      </a>
+    </div>
 
     <!-- 未连接状态：显示创建/加入房间 -->
     <div v-if="!isConnected && !myPeerId" class="bg-white rounded-2xl p-6 shadow-2xl text-center w-full max-w-md">
@@ -434,7 +458,12 @@ async function handleGiveUpSeat(spectatorId, spectatorName) {
       <!-- 电脑端右侧面板 -->
       <div class="hidden lg:flex flex-col gap-4 min-w-[200px] max-w-[240px]">
         <!-- 标题 -->
-        <h1 class="text-indigo-600 text-2xl font-bold text-center">P2P 五子棋</h1>
+        <div class="flex items-center justify-center gap-3">
+          <h1 class="text-indigo-600 text-2xl font-bold">P2P 五子棋</h1>
+          <a href="https://github.com/wangle201210/gobang" target="_blank" class="opacity-60 hover:opacity-100 transition-opacity">
+            <img :src="githubIcon" alt="GitHub" class="w-6 h-6" />
+          </a>
+        </div>
 
         <!-- 游戏状态 -->
         <div class="bg-white rounded-2xl p-4 shadow-2xl">
@@ -534,6 +563,7 @@ async function handleGiveUpSeat(spectatorId, spectatorName) {
             退出房间
           </button>
         </div>
+
       </div>
     </div>
   </div>
