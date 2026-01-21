@@ -1,6 +1,23 @@
 import { ref, reactive, onUnmounted } from 'vue'
 import Peer from 'peerjs'
 
+// ICE 服务器配置，用于 NAT 穿透
+const iceServers = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' },
+  { urls: 'stun:stun2.l.google.com:19302' },
+  { urls: 'stun:stun3.l.google.com:19302' },
+  { urls: 'stun:stun4.l.google.com:19302' },
+  { urls: 'stun:global.stun.twilio.com:3478' },
+  { urls: 'stun:stun.cloudflare.com:3478' },
+]
+
+const peerConfig = {
+  config: {
+    iceServers,
+  },
+}
+
 // 持久化用户 ID
 function getOrCreateUserId() {
   let id = localStorage.getItem('gobang-user-id')
@@ -82,7 +99,7 @@ export function usePeer() {
   function createRoom(onMessage, existingRoomId = null) {
     return new Promise((resolve, reject) => {
       const roomId = existingRoomId || generateRoomId()
-      peer.value = new Peer(roomId)
+      peer.value = new Peer(roomId, peerConfig)
       isHost.value = true
       myName.value = getMyName()
       myRole.value = 'black'
@@ -279,7 +296,7 @@ export function usePeer() {
 
   function joinRoom(roomId, onMessage) {
     return new Promise((resolve, reject) => {
-      peer.value = new Peer()
+      peer.value = new Peer(peerConfig)
       isHost.value = false
 
       peer.value.on('open', (id) => {
